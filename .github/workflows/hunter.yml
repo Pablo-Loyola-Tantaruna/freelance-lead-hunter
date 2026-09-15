@@ -1,0 +1,54 @@
+name: Freelance Lead Hunter
+
+on:
+  schedule:
+    # GitHub cron is UTC. Runs every 3 hours, offset from minute 00.
+    - cron: "17 */3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hunt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Hunt for leads
+        env:
+          SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SERPER_GL: us
+          SERPER_HL: en
+          SERPER_NUM: "10"
+          SERPER_TBS: qdr:d
+          MIN_SCORE: "4"
+          NOTIFY_SCORE: "6"
+          TELEGRAM_PUSH_MAX: "8"
+          MAX_AGE_HOURS: "48"
+          DEBUG: "1"
+        run: python -m hunter.lead_hunter
+
+      - name: Upload current lead exports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lead-export-${{ github.run_number }}
+          path: |
+            leads.csv
+            leads.html
+            links.txt
+          if-no-files-found: ignore
+          retention-days: 7
