@@ -217,9 +217,9 @@ def as_row(lead: Lead) -> dict:
 
 def telegram_send_lead(row: dict):
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        return
+        raise RuntimeError("Telegram credentials missing; keep lead pending")
     text = (
-        f"🔥 <b>{html.escape(str(row['score']))}/10+ — {html.escape(row['source'])}</b>\n"
+        f"🔥 <b>{html.escape(str(row['score']))}/10 — {html.escape(row['source'])}</b>\n"
         f"<b>{html.escape(row['title'][:180])}</b>\n\n"
         f"{html.escape(', '.join((row.get('stack_hits') or [])[:8]))}\n"
         f"{html.escape((row.get('reasons') or '')[:700])}\n"
@@ -233,6 +233,11 @@ def telegram_send_lead(row: dict):
             {"text": "⭐ Guardar", "callback_data": f"status:{row['id']}:SAVED"},
             {"text": "✅ Apliqué", "callback_data": f"status:{row['id']}:APPLIED"},
             {"text": "❌ Descartar", "callback_data": f"status:{row['id']}:DISCARDED"},
+        ],
+        [
+            {"text": "📨 Contacté", "callback_data": f"status:{row['id']}:CONTACTED"},
+            {"text": "💬 Respondió", "callback_data": f"status:{row['id']}:REPLIED"},
+            {"text": "💰 Cliente", "callback_data": f"status:{row['id']}:CLIENT"},
         ]
     ]}
     r = requests.post(
