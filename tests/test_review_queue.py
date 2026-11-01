@@ -3,6 +3,7 @@ import unittest
 from unittest.mock import MagicMock
 
 from storage.supabase import SupabaseStorage
+from hunter.lead_hunter import search_locale
 
 
 class ReviewQueueTests(unittest.TestCase):
@@ -32,6 +33,14 @@ class ReviewQueueTests(unittest.TestCase):
         ])
         result = storage.list_qualified_for_review(limit=5)
         self.assertEqual(len(result), 5)
+
+    def test_spanish_queries_use_peru_search_locale(self):
+        self.assertEqual(search_locale('busco desarrollador Java freelance'), ("pe", "es"))
+        self.assertEqual(search_locale('site:linkedin.com/posts "necesito" Java'), ("pe", "es"))
+
+    def test_english_queries_use_default_search_locale(self):
+        gl, hl = search_locale("freelance Spring Boot developer")
+        self.assertEqual((gl, hl), ("us", "en"))
 
     def test_pending_notifications_accept_five_point_buyer(self):
         storage = object.__new__(SupabaseStorage)
