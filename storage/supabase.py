@@ -79,6 +79,32 @@ class SupabaseStorage:
         allowed = ("CLIENTE_DIRECTO", "PROYECTO_FREELANCE", "AGENCIA", "PROYECTO_POR_VALIDAR")
         return [row for row in rows if any(f"tipo: {kind}" in (row.get("reasons") or "") for kind in allowed)][:limit]
 
+    def get_lead(self, lead_id: int) -> dict[str, Any] | None:
+        rows = self._request(
+            "GET", "leads", params=[("select", "*"), ("id", f"eq.{int(lead_id)}"), ("limit", "1")]
+        ) or []
+        return rows[0] if rows else None
+
+    def claim_for_contact(self, lead_id: int) -> dict[str, Any] | None:
+        """Atomic conditional claim: prevent repeated sends for the same lead."""
+        rows = self._request(
+            "PATCH", "leads",
+            params=[("id", f"eq.{int(lead_id)}"), ("status", "in.(NEW,SAVED)")],
+            json={"status": "APPLIED", "updated_at": datetime.now(timezone.utc).isoformat()},
+            prefer="return=representation",
+        ) or []
+        return rows[0] if rows else None
+
+    def release_failed_contact(self, lead_id: int, original_status: str):
+        if original_status not in {"NEW", "SAVED"}:
+            raise ValueError("Invalid original status")
+        self._request(
+            "PATCH", "leads",
+            params=[("id", f"eq.{int(lead_id)}"), ("status", "eq.APPLIED")],
+            json={"status": original_status, "updated_at": datetime.now(timezone.utc).isoformat()},
+            prefer="return=minimal",
+        )
+
     def get_recent(self, limit: int = 500) -> list[dict[str, Any]]:
         return self.list_leads(limit=limit)
 

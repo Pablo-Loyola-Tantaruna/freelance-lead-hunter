@@ -229,6 +229,7 @@ def telegram_send_lead(row: dict):
     )
     keyboard = {"inline_keyboard": [
         [{"text": "🔗 Abrir", "url": row["url"]}],
+        [{"text": "🤖 Preparar candidatura", "callback_data": f"pitch:{row['id']}"}],
         [
             {"text": "⭐ Guardar", "callback_data": f"status:{row['id']}:SAVED"},
             {"text": "✅ Apliqué", "callback_data": f"status:{row['id']}:APPLIED"},

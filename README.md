@@ -1,3 +1,89 @@
+# FreeBot V6 — AI-assisted applications
+
+V6 solves the **application bottleneck**: instead of just collecting job posts,
+it prepares tailored pitches and makes permitted outbound email applications
+possible after explicit human review. It does **not** automate marketplace
+websites, login sessions, captchas, or direct messages.
+
+### Telegram workflow
+
+1. In an existing lead alert tap **🤖 Preparar candidatura**, or send
+   `/queue` (the five highest-scoring NEW leads found in the past 48h).
+2. The Telegram service creates an AI proposal **on demand**, with a safe
+   deterministic template if the optional API is missing/unavailable.
+3. For Upwork/Freelancer/Workana/Contra, tap **Abrir oferta y postular**
+   and submit inside the platform. These sites are **never auto-contacted by email**.
+4. For legitimate **email-based applications explicitly invited by the advertiser**,
+   tap **Preparar correo** if the snippet includes an application address, or use
+   `/email 123 jobs@company.com` after verifying the address on the original listing.
+5. Telegram displays **the exact recipient, subject and body** in a signed preview.
+   Only tapping **✅ CONFIRMAR Y ENVIAR EMAIL** sends the email, if delivery is enabled.
+   The bot records a successful send as `CONTACTED` in Supabase and prevents repeated
+   sends for the same lead. Review confirmations expire after 24 hours.
+
+Commands: `/queue`, `/pitch 123`, `/email 123 jobs@company.com`, `/stats`.
+**This is an opt-in, review-before-send workflow, not unattended auto-apply.**
+
+### Optional AI drafts — configure on the Telegram bot host
+
+```dotenv
+OPENAI_API_KEY=<your API key>
+OPENAI_MODEL=gpt-4.1-mini
+FREELANCER_PROFILE="Backend engineer with professional Java/Spring Boot/Kubernetes experience..."
+```
+
+AI API usage is **separately billed** from ChatGPT subscriptions and sends
+the public listing title/snippet and your configured public professional profile
+to the provider. Keep confidential employer/customer information out of the
+profile. The bot calls AI only after a draft/preview request, not every 3h scan.
+Never commit API credentials.
+
+Without `OPENAI_API_KEY`, the bot keeps working with a deterministic pitch template.
+
+### Optional approved outbound email — configure on the Telegram bot host
+
+```dotenv
+EMAIL_SEND_ENABLED=1
+SMTP_HOST=smtp.example.com
+SMTP_PORT=465
+SMTP_USER=<mailbox username>
+SMTP_PASSWORD=<app password or SMTP credential>
+SMTP_FROM=<verified sender email>
+```
+
+Use secure TLS ports 465/587. Choose a provider whose policies permit
+transactional, individually approved job applications. Do not use your
+corporate email, laptop, or confidential employer data. All values are server
+secrets, **not** browser variables or GitHub repository code.
+
+Outbound sending stays **disabled** until these env vars are configured. You
+must redeploy/restart the **long-running Telegram bot** service for the new
+commands; simply merging GitHub Actions does not update the deployed bot.
+You may run `python -m bot.telegram_bot` locally with the environment configured
+for testing. To receive alerts on schedule, GitHub Actions remains separate.
+
+### Risk controls and limitations
+
+- Manual review/approval before **every** outbound message; no mass cold-email.
+- No bot-driven LinkedIn/Upwork/etc. browser submissions or unauthorized scraping.
+- A job's **snippet is not proof** that an email is real or still accepting applications;
+  check the original offer before confirming.
+- Email delivery can fail or time out after reaching the provider. If uncertain,
+  inspect your sent folder before retrying. Never assume an email was delivered
+  solely because an SMTP connection was attempted.
+- Using the bot creates no contracts and does not guarantee earnings. Track
+  contacted, replied and client statuses to measure conversion.
+
+### V6 verification
+
+```bash
+pip install -r requirements.txt
+python -m compileall -q bot hunter storage tests
+python -m unittest discover -s tests -v
+```
+
+---
+
 ## V5: qualified prospects, not just keyword matches
 
 V5 prioritizes actual buying signals over listing technologies. A result is classified as
