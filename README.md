@@ -1,4 +1,33 @@
-# Freelance Lead Hunter V4
+## V5: qualified prospects, not just keyword matches
+
+V5 prioritizes actual buying signals over listing technologies. A result is classified as
+**CLIENTE_DIRECTO**, **PROYECTO_FREELANCE**, **AGENCIA**, **PROYECTO_POR_VALIDAR**,
+**EMPLEO_REMOTO**, or **SIN_INTENCION_CONFIRMADA**.
+
+- The rating is bounded at **0–10**. Words in the search query never raise a lead's score.
+- Exact-term matching prevents false positives (e.g. Go inside Google).
+- Generic result pages and explicit US-only/onsite restrictions are rejected.
+- Dates parse ISO and relative timestamps, excluding posts older than `MAX_AGE_HOURS`.
+  Unknown publication dates are **not confirmed fresh**; check the original post.
+- Telegram alerts now include source date and a bilingual **draft**, to be checked and
+  personalized manually before contacting anyone. No automatic DMs or applications.
+- Recent unsent V5 leads are retried if a Telegram request fails, without resetting your
+  existing Supabase statuses. No schema migration or new secret is required.
+- Notifications target qualified leads, not generic full-time remote job listings.
+- Workflow runs `python -m unittest discover -s tests -v` before hunting.
+
+**Important:** V5 improves lead prioritization; it does not validate that a prospect will pay
+or guarantee eligibility, pay rates, or client acquisition. The draft must never be sent unreviewed.
+
+### Recommended rollout
+
+Review the Pull Request, merge after CI passes, then use **Actions → Freelance Lead Hunter →
+Run workflow** once. Inspect the logs and a few Telegram alerts before relying on the
+scheduled search. The Telegram long-polling service does not need a database migration.
+
+---
+
+# Freelance Lead Hunter V5 (Client Acquisition)
 
 V4 separates the system into two services:
 
