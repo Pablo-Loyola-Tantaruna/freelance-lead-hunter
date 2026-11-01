@@ -136,7 +136,7 @@ def make_preview(lead_id: int, recipient: str, subject: str, body: str) -> str:
         raise ValueError("Invalid destination email")
     subject = clean_text(subject)[:150]
     body = body.strip()
-    if not body or BODY_CLOSE in body or BODY_OPEN in body or len(body) > 2000:
+    if not body or "--- MESSAGE END ---" in body or "--- MESSAGE START ---" in body or len(body) > 2000:
         raise ValueError("Invalid proposal body")
     return (
         f"{DRAFT_PREFIX}\n"
