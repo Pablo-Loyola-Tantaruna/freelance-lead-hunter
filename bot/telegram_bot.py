@@ -122,9 +122,9 @@ def show_pitch(chat_id, lead_id: int):
     draft = make_draft(lead)
     label = "IA" if draft.used_ai else "Plantilla (configura OPENAI_API_KEY para IA)"
     body = (
-        f"🤖 <b>Propuesta para #{lead_id}</b> — {html.escape(label)}\\n"
-        f"<b>{html.escape(str(lead.get('title') or '')[:140])}</b>\\n\\n"
-        f"{html.escape(draft.body)}\\n\\n"
+        f"🤖 <b>Propuesta para #{lead_id}</b> — {html.escape(label)}\n"
+        f"<b>{html.escape(str(lead.get('title') or '')[:140])}</b>\n\n"
+        f"{html.escape(draft.body)}\n\n"
         "⚠️ Revisa el anuncio y personaliza antes de enviarla. No se ha postulado automáticamente."
     )
     keyboard = {"inline_keyboard": [
@@ -137,7 +137,7 @@ def show_pitch(chat_id, lead_id: int):
              "callback_data": f"prepareemail:{lead_id}"}
         ])
     if not platform_only(lead):
-        body += (f"\\n\\nPara un email distinto expresamente indicado en el anuncio:"
+        body += (f"\n\nPara un email distinto expresamente indicado en el anuncio:"
                  f" <code>/email {lead_id} destino@empresa.com</code>")
     send(chat_id, body, keyboard)
 
