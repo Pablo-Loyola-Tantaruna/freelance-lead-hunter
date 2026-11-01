@@ -1,5 +1,34 @@
 # FreeBot V6 — AI-assisted applications
 
+## V6.1: More usable leads, less silence
+
+A real V5 scheduled run found 223 raw candidates, 7 above its minimum score,
+4 new database records, and only 1 Telegram notification. That did **not** mean
+only one opportunity existed; the notification threshold was too restrictive
+for a competitive market.
+
+- Telegram alerts: eligible project/agency/buyer leads scored **5+** rather than 6+.
+- Max **5** alerts per run; sending remains *never* equivalent to applying.
+- `/queue`: the top five eligible **NEW or SAVED** leads from the past 72 hours.
+- `/backlog`: up to 15 eligible leads scored 4+ from the past seven days.
+- More buyer/problem-oriented queries, without increasing the query count per run.
+- GitHub Actions now prints stage diagnostics: old postings, low scores,
+  duplicate URLs, new versus previously stored records, and alert candidates.
+- We keep explicit location restrictions, generic-page rejection, and manual
+  review before any outbound application.
+
+The V6 Telegram commands require redeploying/restarting the **Telegram bot
+worker**, while search/filter changes take effect on the next GitHub Actions
+run after merge. A new PR merge does **not** restart a separate Railway/Render
+worker automatically unless its deployment was configured to do so.
+
+If `/queue` returns zero, check `/backlog`. If both are empty, read the
+**Pipeline diagnostics** section of GitHub Actions logs to distinguish a quiet
+market from filter or search problems.
+
+---
+
+
 V6 solves the **application bottleneck**: instead of just collecting job posts,
 it prepares tailored pitches and makes permitted outbound email applications
 possible after explicit human review. It does **not** automate marketplace

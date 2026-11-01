@@ -63,29 +63,29 @@ GENERIC_PAGE_PATTERNS = [
 # Every 3-hour run executes one group. Four groups => every category is searched at least every 12h.
 QUERY_GROUPS = {
     "backend_go_java": [
-        'site:linkedin.com/posts "looking for" "java developer" contract',
-        'site:linkedin.com/posts ("go developer" OR "golang developer") (contract OR freelance)',
-        'site:linkedin.com/posts ("need help" OR "looking for someone") ("spring boot" OR "java api")',
+        'site:linkedin.com/posts (java OR "spring boot") (freelance OR contractor OR "need help")',
+        'site:linkedin.com/posts (golang OR "go developer") (freelance OR contractor OR hiring)',
+        '("need spring boot developer" OR "spring boot API issue") freelance remote',
         'site:upwork.com/freelance-jobs/apply (java OR "spring boot") backend',
         'site:upwork.com/freelance-jobs/apply (go OR golang) backend',
         'site:freelancer.com/projects (golang OR go) backend',
         'site:workana.com/job (java OR golang OR backend)',
     ],
     "cloud_platform": [
-        'site:linkedin.com/posts "need help" (AWS OR Azure)',
-        'site:linkedin.com/posts "looking for someone" Kubernetes',
+        'site:linkedin.com/posts (AWS OR Azure) (contractor OR consultant OR freelance)',
+        '("need help with Kubernetes" OR "Kubernetes troubleshooting") freelance',
         'site:linkedin.com/posts (terraform OR kubernetes) (consultant OR contractor)',
         'site:upwork.com/freelance-jobs/apply aws kubernetes terraform',
         'site:upwork.com/freelance-jobs/apply azure kubernetes terraform',
-        'site:freelancer.com/projects (aws OR azure) kubernetes terraform',
+        'site:freelancer.com/projects (aws OR azure) (kubernetes OR terraform)',
         'site:contra.com (cloud OR devops OR kubernetes) (contract OR freelance)',
     ],
     "api_data_observability": [
         'site:linkedin.com/posts (kafka OR redis OR "rest api") (contractor OR consultant)',
         'site:linkedin.com/posts (grafana OR prometheus OR opentelemetry) consultant',
         'site:linkedin.com/posts "need help" (microservices OR api)',
-        'site:upwork.com/freelance-jobs/apply microservices kafka redis',
-        'site:upwork.com/freelance-jobs/apply grafana prometheus kubernetes',
+        'site:upwork.com/freelance-jobs/apply ("spring boot" OR "rest api")',
+        'site:upwork.com/freelance-jobs/apply (grafana OR prometheus OR kubernetes)',
         'site:freelancer.com/projects (microservices OR "rest api") backend',
         'site:contra.com (backend OR api) (contract OR freelance)',
     ],
@@ -101,6 +101,6 @@ QUERY_GROUPS = {
 }
 
 CORE_QUERIES = [
-    'site:linkedin.com/posts "looking for someone" (backend OR cloud OR devops) remote',
-    'site:linkedin.com/posts ("necesito" OR "busco") ("desarrollador" OR "automatización") (freelance OR proyecto)',
+    '(site:linkedin.com/posts OR site:reddit.com/r/forhire) (backend OR devops OR "spring boot") (freelance OR contractor)',
+    '("busco desarrollador java" OR "necesito automatización" OR "busco programador backend") freelance',
 ]

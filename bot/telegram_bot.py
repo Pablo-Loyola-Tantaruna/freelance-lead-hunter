@@ -244,16 +244,15 @@ def handle_command(chat_id, text):
             "/source LinkedIn — filtrar fuente\n/stack go — filtrar tecnología\n"
             "/saved /applied /contacted /replied — estados\n/stats — embudo\n"
             "/searchplan — búsquedas\n/refresh — ejecutar hunter\n"
-            "/queue — cinco mejores leads pendientes\n/pitch ID — generar propuesta IA\n"
+            "/queue — mejores proyectos (72h)\n/backlog — historial reciente (7 días)\n/pitch ID — propuesta IA\n"
             "/email ID correo@empresa.com — revisar y aprobar correo\n"
         ))
     elif cmd == "/queue":
-        rows = storage.list_leads(status="NEW", limit=50, min_score=7, since_hours=48)
-        selected = [row for row in rows if any(
-            f"tipo: {kind}" in (row.get("reasons") or "")
-            for kind in ("CLIENTE_DIRECTO", "PROYECTO_FREELANCE", "AGENCIA", "PROYECTO_POR_VALIDAR")
-        )][:5]
-        show_rows(chat_id, selected, "Top 5 para postular hoy")
+        rows = storage.list_qualified_for_review(limit=5, min_score=5, since_hours=72)
+        show_rows(chat_id, rows, "5 oportunidades priorizadas (72h)")
+    elif cmd == "/backlog":
+        rows = storage.list_qualified_for_review(limit=15, min_score=4, since_hours=168)
+        show_rows(chat_id, rows, "Backlog de oportunidades (7 días)")
     elif cmd == "/pitch":
         if not arg.isdigit():
             send(chat_id, "Uso: <code>/pitch 123</code>")
