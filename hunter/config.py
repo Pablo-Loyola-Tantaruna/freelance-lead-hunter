@@ -65,7 +65,7 @@ QUERY_GROUPS = {
     "backend_go_java": [
         'site:linkedin.com/posts "looking for" "java developer" contract',
         'site:linkedin.com/posts ("go developer" OR "golang developer") (contract OR freelance)',
-        'site:linkedin.com/posts "backend engineer" "short term"',
+        'site:linkedin.com/posts ("need help" OR "looking for someone") ("spring boot" OR "java api")',
         'site:upwork.com/freelance-jobs/apply (java OR "spring boot") backend',
         'site:upwork.com/freelance-jobs/apply (go OR golang) backend',
         'site:freelancer.com/projects (golang OR go) backend',
@@ -91,7 +91,7 @@ QUERY_GROUPS = {
     ],
     "buyers_agencies_secondary": [
         'site:linkedin.com/posts (CTO OR founder) "looking for" (backend OR devops)',
-        'site:linkedin.com/posts "software agency" (contractor OR freelance) backend',
+        'site:linkedin.com/posts ("software agency" OR "agencia de software") ("contractor" OR "freelance" OR "proyecto")',
         'site:linkedin.com/posts "technical recruiter" (contract OR contractor) (java OR aws OR kubernetes)',
         'site:linkedin.com/posts (nestjs OR node.js OR quarkus) (contract OR freelance)',
         'site:linkedin.com/posts (kotlin OR android) (contract OR freelance)',
@@ -102,5 +102,5 @@ QUERY_GROUPS = {
 
 CORE_QUERIES = [
     'site:linkedin.com/posts "looking for someone" (backend OR cloud OR devops) remote',
-    'site:linkedin.com/posts "need help" (backend OR aws OR kubernetes OR api)',
+    'site:linkedin.com/posts ("necesito" OR "busco") ("desarrollador" OR "automatización") (freelance OR proyecto)',
 ]

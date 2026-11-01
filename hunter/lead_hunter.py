@@ -15,6 +15,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 import requests
 from dotenv import load_dotenv
 
+from hunter.qualification import evaluate, has_term, is_recent, suggested_message
 from hunter.config import (
     CORE_QUERIES, DIRECT_NEED_TERMS, GENERIC_PAGE_PATTERNS, GEO_POSITIVE,
     INTENT_TERMS, MARKETPLACE_SOURCES, NEGATIVE_TERMS, QUERY_GROUPS, STACK,
@@ -56,6 +57,7 @@ class Lead:
     reasons: str = ""
     stack_hits: list[str] | None = None
     intent_hits: list[str] | None = None
+    lead_type: str = "SIN_INTENCION_CONFIRMADA"
 
 
 def now_iso() -> str:
@@ -87,61 +89,15 @@ def looks_generic(lead: Lead) -> bool:
 
 
 def score_lead(lead: Lead) -> Lead:
-    text = normalize(f"{lead.title} {lead.snippet}")
-    query = normalize(lead.query)
-    score = 0
-    reasons: list[str] = []
-
-    stack_hits = sorted({kw for kw in STACK if kw in text})
-    lead.stack_hits = stack_hits
-    if stack_hits:
-        # Reward breadth, cap so one verbose post doesn't dominate.
-        stack_score = min(6, 1 + len(stack_hits) // 2)
-        score += stack_score
-        reasons.append(f"stack +{stack_score}: {', '.join(stack_hits[:8])}")
-
-    intent_hits = sorted({kw for kw in INTENT_TERMS if kw in text})
-    lead.intent_hits = intent_hits
-    if intent_hits:
-        intent_score = min(4, 1 + len(intent_hits) // 2)
-        score += intent_score
-        reasons.append(f"intent +{intent_score}: {', '.join(intent_hits[:6])}")
-
-    if any(term in text for term in DIRECT_NEED_TERMS):
-        score += 2
-        reasons.append("direct need +2")
-
-    if query:
-        if any(x in query for x in ["looking for", "need help", "looking for someone", "need someone"]):
-            score += 2
-            reasons.append("search intent +2")
-        elif any(x in query for x in ["contract", "contractor", "consultant", "freelance"]):
-            score += 1
-            reasons.append("search intent +1")
-
-    if lead.source in MARKETPLACE_SOURCES:
-        score += 2
-        reasons.append("freelance marketplace +2")
-
-    geo_hits = sorted({x for x in GEO_POSITIVE if x in text})
-    if geo_hits:
-        score += min(2, len(geo_hits))
-        reasons.append(f"geo/remote +{min(2, len(geo_hits))}: {', '.join(geo_hits[:4])}")
-
-    if any(x in text for x in ["usd", "$", "dollar", "hourly rate", "/hr", "per hour"]):
-        score += 1
-        reasons.append("USD/rate +1")
-
-    neg_hits = [kw for kw in NEGATIVE_TERMS if kw in text]
-    if neg_hits:
-        score -= 5
-        reasons.append(f"constraints -5: {', '.join(neg_hits[:3])}")
-
-    if looks_generic(lead):
-        score -= 7
-        reasons.append("generic/search page -7")
-
-    lead.score = max(0, score)
+    text = f"{lead.title} {lead.snippet}"
+    lead.stack_hits = sorted(kw for kw in STACK if has_term(text, kw))
+    lead.intent_hits = sorted(kw for kw in INTENT_TERMS if has_term(text, kw))
+    score, lead_type, reasons, eligible = evaluate(
+        lead.source, lead.title, lead.snippet, lead.url, lead.stack_hits,
+        generic=looks_generic(lead),
+    )
+    lead.score = score
+    lead.lead_type = lead_type
     lead.reasons = "; ".join(reasons)
     return lead
 
@@ -261,12 +217,15 @@ def as_row(lead: Lead) -> dict:
 
 def telegram_send_lead(row: dict):
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        return
+        raise RuntimeError("Telegram credentials missing; keep lead pending")
     text = (
-        f"🔥 <b>{html.escape(str(row['score']))}/10+ — {html.escape(row['source'])}</b>\n"
+        f"🔥 <b>{html.escape(str(row['score']))}/10 — {html.escape(row['source'])}</b>\n"
         f"<b>{html.escape(row['title'][:180])}</b>\n\n"
         f"{html.escape(', '.join((row.get('stack_hits') or [])[:8]))}\n"
-        f"{html.escape((row.get('reasons') or '')[:700])}"
+        f"{html.escape((row.get('reasons') or '')[:700])}\n"
+        f"📅 Fecha: {html.escape(str(row.get('published_text') or 'no verificada')[:80])}\n"
+        f"📨 Borrador (revisar antes de enviar):\n"
+        f"{html.escape(suggested_message(str(row.get('title', '')), row.get('stack_hits') or [], str(row.get('snippet') or ''))[:600])}"
     )
     keyboard = {"inline_keyboard": [
         [{"text": "🔗 Abrir", "url": row["url"]}],
@@ -274,6 +233,11 @@ def telegram_send_lead(row: dict):
             {"text": "⭐ Guardar", "callback_data": f"status:{row['id']}:SAVED"},
             {"text": "✅ Apliqué", "callback_data": f"status:{row['id']}:APPLIED"},
             {"text": "❌ Descartar", "callback_data": f"status:{row['id']}:DISCARDED"},
+        ],
+        [
+            {"text": "📨 Contacté", "callback_data": f"status:{row['id']}:CONTACTED"},
+            {"text": "💬 Respondió", "callback_data": f"status:{row['id']}:REPLIED"},
+            {"text": "💰 Cliente", "callback_data": f"status:{row['id']}:CLIENT"},
         ]
     ]}
     r = requests.post(
@@ -325,7 +289,7 @@ def main():
 
     best: dict[str, Lead] = {}
     for lead in candidates:
-        if lead.score < MIN_SCORE or not lead.url:
+        if lead.score < MIN_SCORE or not lead.url or not is_recent(lead.published_text, MAX_AGE_HOURS):
             continue
         old = best.get(lead.url)
         if old is None or lead.score > old.score:
@@ -338,7 +302,11 @@ def main():
             new_rows.append(inserted)
 
     write_exports(storage)
-    notifiable = [r for r in new_rows if int(r.get("score") or 0) >= NOTIFY_SCORE][:TELEGRAM_PUSH_MAX]
+    # Retry recent unsent V5-qualified leads, including previous failed sends.
+    notifiable = storage.get_pending_notifications(
+        min_score=NOTIFY_SCORE, since_hours=MAX_AGE_HOURS,
+        limit=TELEGRAM_PUSH_MAX,
+    )
     for row in notifiable:
         try:
             telegram_send_lead(row)
@@ -346,7 +314,7 @@ def main():
         except Exception as e:
             print(f"Telegram notification error for lead {row.get('id')}: {e}")
 
-    print(f"Candidates: {len(candidates)} | above threshold unique: {len(best)} | new: {len(new_rows)} | pushed: {len(notifiable)}")
+    print(f"Candidates: {len(candidates)} | above threshold unique: {len(best)} | new: {len(new_rows)} | notification attempts: {len(notifiable)}")
     if DEBUG:
         for lead in sorted(best.values(), key=lambda x: x.score, reverse=True)[:15]:
             print(f"[{lead.score}] {lead.source}: {lead.title[:100]} | {lead.reasons}")

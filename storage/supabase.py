@@ -61,6 +61,24 @@ class SupabaseStorage:
             params.append(("found_at", f"gte.{ts}"))
         return self._request("GET", "leads", params=params) or []
 
+    def get_pending_notifications(self, *, min_score: int = 6,
+                                  since_hours: int = 48, limit: int = 8) -> list[dict[str, Any]]:
+        """Only recent, unsent and classified V5 leads; failed sends remain retryable."""
+        ts = (datetime.now(timezone.utc) - timedelta(hours=since_hours)).isoformat()
+        rows = self._request("GET", "leads", params=[
+            ("select", "*"),
+            ("notified", "eq.false"),
+            ("status", "eq.NEW"),
+            ("score", f"gte.{min_score}"),
+            ("found_at", f"gte.{ts}"),
+            ("reasons", "like.*tipo:*"),
+            ("order", "score.desc,found_at.desc"),
+            ("limit", str(max(1, min(limit * 5, 100)))),
+        ]) or []
+        # Only buyer/agency/contract opportunities are pushed, not generic remote jobs.
+        allowed = ("CLIENTE_DIRECTO", "PROYECTO_FREELANCE", "AGENCIA", "PROYECTO_POR_VALIDAR")
+        return [row for row in rows if any(f"tipo: {kind}" in (row.get("reasons") or "") for kind in allowed)][:limit]
+
     def get_recent(self, limit: int = 500) -> list[dict[str, Any]]:
         return self.list_leads(limit=limit)
 
