@@ -113,8 +113,15 @@ def source_for_url(url: str) -> str:
     return "Web"
 
 
+def search_locale(query: str) -> tuple[str, str]:
+    # Don't force Latin-American search terms into US English search results.
+    spanish_terms = ("busco", "necesito", "desarrollador", "programador", "automatización", "freelo")
+    return ("pe", "es") if any(term in query.lower() for term in spanish_terms) else (SERPER_GL, SERPER_HL)
+
+
 def serper_search(query: str) -> Iterable[Lead]:
-    payload = {"q": query, "num": SERPER_NUM, "gl": SERPER_GL, "hl": SERPER_HL}
+    gl, hl = search_locale(query)
+    payload = {"q": query, "num": SERPER_NUM, "gl": gl, "hl": hl}
     if SERPER_TBS:
         payload["tbs"] = SERPER_TBS
     r = requests.post(
