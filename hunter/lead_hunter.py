@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+from collections import Counter
 import hashlib
 import html
 import json
@@ -289,12 +290,36 @@ def main():
         print("SERPER_API_KEY missing: only public job APIs will be searched.")
 
     best: dict[str, Lead] = {}
+    pipeline = Counter()
+    lead_types = Counter()
+    sources = Counter(x.source for x in candidates)
     for lead in candidates:
-        if lead.score < MIN_SCORE or not lead.url or not is_recent(lead.published_text, MAX_AGE_HOURS):
+        if not lead.url:
+            pipeline["missing_url"] += 1
             continue
+        if not is_recent(lead.published_text, MAX_AGE_HOURS):
+            pipeline["stale_publication"] += 1
+            continue
+        if lead.score < MIN_SCORE:
+            pipeline["below_min_score"] += 1
+            continue
+        pipeline["passed_initial_filters"] += 1
+        lead_types[lead.lead_type] += 1
         old = best.get(lead.url)
         if old is None or lead.score > old.score:
             best[lead.url] = lead
+
+    pipeline["deduplicated_unique"] = len(best)
+    pipeline["duplicate_urls"] = pipeline["passed_initial_filters"] - len(best)
+    pipeline["qualified_to_alert"] = sum(
+        1 for lead in best.values()
+        if lead.score >= NOTIFY_SCORE and lead.lead_type in {
+            "CLIENTE_DIRECTO", "PROYECTO_FREELANCE", "AGENCIA", "PROYECTO_POR_VALIDAR"
+        } and bool(lead.stack_hits)
+    )
+    print(f"Pipeline diagnostics: {dict(pipeline)}")
+    print(f"Sources: {dict(sources)}")
+    print(f"Candidate types after initial filters: {dict(lead_types)}")
 
     new_rows = []
     for lead in sorted(best.values(), key=lambda x: x.score, reverse=True):
@@ -302,12 +327,16 @@ def main():
         if inserted:
             new_rows.append(inserted)
 
+    pipeline["new_in_database"] = len(new_rows)
+    pipeline["already_seen_in_database"] = len(best) - len(new_rows)
     write_exports(storage)
     # Retry recent unsent V5-qualified leads, including previous failed sends.
     notifiable = storage.get_pending_notifications(
         min_score=NOTIFY_SCORE, since_hours=MAX_AGE_HOURS,
         limit=TELEGRAM_PUSH_MAX,
     )
+    pipeline["alerts_queued"] = len(notifiable)
+    print(f"Delivery diagnostics: {dict(pipeline)}")
     for row in notifiable:
         try:
             telegram_send_lead(row)
